@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>线路介绍 - 长福轨道交通</title>
+  <style>
+    :root{--bg:#f7f9fb;--primary:#0b71d5;--muted:#6b7280}
+    body{font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:var(--bg); color:#0f172a; margin:0}
+    .container{max-width:720px;margin:48px auto;padding:24px;text-align:center;background:#fff;border-radius:12px;box-shadow:0 6px 20px rgba(11,23,52,0.08)}
+    h1{margin:0 0 8px;font-size:28px}
+    p.lead{color:var(--muted);margin-top:0}
+    .actions{display:flex;flex-direction:column;gap:14px;margin-top:28px}
+    a.btn{display:inline-block;padding:14px 20px;border-radius:10px;text-decoration:none;color:#fff;background:var(--primary);font-weight:600}
+    a.btn.secondary{background:#6b7280}
+    .line-desc{color:#0f172a;background:#f1f5f9;padding:12px;border-radius:8px;margin-top:8px;font-size:14px}
+    footer{margin-top:26px;color:var(--muted);font-size:13px}
+    @media(min-width:520px){.actions{flex-direction:row;justify-content:center}}
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>线路介绍</h1>
+    <p class="lead">请选择下列线路以查看详细信息</p>
+
+    <div class="actions" role="list">
+      <a class="btn" role="listitem" href="line1.html" aria-label="查看1号线 城际快线">1号线 — 城际快线</a>
+      <a class="btn secondary" role="listitem" href="line2.html" aria-label="查看2号线 市区环线">2号线 — 市区环线</a>
+      <a class="btn" role="listitem" href="line3.html" aria-label="查看3号线 南北主干线">3号线 — 南北主干线</a>
+      <a class="btn secondary" role="listitem" href="line4.html" aria-label="查看4号线 机场联络线">4号线 — 机场联络线</a>
+    </div>
+
+    <section aria-labelledby="overview" style="margin-top:20px;text-align:left">
+      <h2 id="overview" style="font-size:16px;margin:0 0 8px">线路简介</h2>
+      <div class="line-desc"><strong>1号线（城际快线）</strong> — 连接市中心与周边卫星城，主打快速通勤，停站较少，运营时速高。</div>
+      <div class="line-desc"><strong>2号线（市区环线）</strong> — 环绕市区主要商圈与换乘枢纽，换乘便利，适合短途出行。</div>
+      <div class="line-desc"><strong>3号线（南北主干线）</strong> — 纵贯南北的主干线，覆盖居民区与工业园区的重要站点。</div>
+      <div class="line-desc"><strong>4号线（机场联络线）</strong> — 直达机场的快速线路，行李寄存与无障碍设施完善。</div>
+    </section>
+
+    <div style="margin-top:22px">
+      <a class="btn secondary" href="index.html" aria-label="返回首页">返回首页</a>
+    </div>
+
+    <footer>项目仓库：mc0427/Changfu-Rail-Transit</footer>
+  </main>
+</body>
+</html>
