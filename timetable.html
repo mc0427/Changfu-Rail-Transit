@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>车站时刻表 - 长福轨道交通</title>
+  <style>
+    :root{--bg:#f7f9fb;--primary:#0b71d5;--muted:#6b7280}
+    body{font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:var(--bg); color:#0f172a; margin:0}
+    .container{max-width:720px;margin:48px auto;padding:24px;text-align:center;background:#fff;border-radius:12px;box-shadow:0 6px 20px rgba(11,23,52,0.08)}
+    h1{margin:0 0 8px;font-size:24px}
+    p.lead{color:var(--muted);margin-top:0}
+    .actions{display:flex;flex-direction:column;gap:14px;margin-top:20px}
+    a.btn{display:inline-block;padding:12px 16px;border-radius:10px;text-decoration:none;color:#fff;background:var(--primary);font-weight:600}
+    a.btn.secondary{background:#6b7280}
+    .station-list{margin-top:18px;text-align:left}
+    .initial{font-weight:700;margin-top:16px}
+    .station{display:inline-block;margin:6px 8px;padding:8px 12px;border-radius:10px;background:#eef6ff;color:var(--primary);cursor:pointer}
+    .station:active{transform:translateY(1px)}
+    #timetable{margin-top:20px;color:var(--muted)}
+    footer{margin-top:26px;color:var(--muted);font-size:13px}
+    @media(min-width:520px){.actions{flex-direction:row;justify-content:center}}
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>车站时刻表</h1>
+    <p class="lead">请选择车站查看时刻表（按汉字拼音首字母排序）</p>
+
+    <div class="actions">
+      <a class="btn secondary" href="index.html">返回首页</a>
+    </div>
+
+    <div id="stationContainer" class="station-list" aria-live="polite"></div>
+
+    <div id="timetable">尚未选择车站。</div>
+
+    <footer>项目仓库：mc0427/Changfu-Rail-Transit</footer>
+  </main>
+
+  <script>
+    // 初始录入车站（name: 中文名, pinyin: 用于排序的拼音）
+    const stations = [
+      {name: '木溪村', pinyin: 'muxicun'},
+      {name: '云栖石镜', pinyin: 'yunqishijing'},
+      {name: '桦甸', pinyin: 'huadian'},
+      {name: '南原大道', pinyin: 'nanyuandadao'},
+      {name: '知音', pinyin: 'zhiyin'},
+      {name: '云樱大道', pinyin: 'yunyingdadao'},
+      {name: '长福火车站', pinyin: 'changfuhuochezhan'}
+    ];
+
+    // 将车站按拼音排序，然后按首字母分组
+    stations.sort((a,b)=> a.pinyin.localeCompare(b.pinyin, 'zh-Hans-u-co-pinyin'));
+
+    const grouped = {};
+    for (const s of stations) {
+      const initial = s.pinyin.charAt(0).toUpperCase();
+      if (!grouped[initial]) grouped[initial] = [];
+      grouped[initial].push(s);
+    }
+
+    const container = document.getElementById('stationContainer');
+
+    for (const initial of Object.keys(grouped).sort()) {
+      const h = document.createElement('div');
+      h.className = 'initial';
+      h.textContent = initial;
+      container.appendChild(h);
+
+      const row = document.createElement('div');
+      for (const s of grouped[initial]) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'station';
+        btn.textContent = s.name;
+        btn.dataset.pinyin = s.pinyin;
+        btn.addEventListener('click', ()=> showTimetable(s));
+        row.appendChild(btn);
+      }
+      container.appendChild(row);
+    }
+
+    function showTimetable(station) {
+      // 这里插入后续对接真实时刻表的逻辑。目前展示占位信息。
+      const el = document.getElementById('timetable');
+      el.innerHTML = `<strong>${station.name}</strong> 的今日时刻表（示例）：<br><ul>
+        <li>06:10 — 首班车</li>
+        <li>07:30 — 高峰班次</li>
+        <li>12:00 — 平峰班次</li>
+        <li>18:20 — 末班车</li>
+      </ul>`;
+    }
+  </script>
+</body>
+</html>
