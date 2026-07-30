@@ -65,7 +65,7 @@
     // 当前选中线路（默认 1）
     let selectedLine = '1';
 
-    // 统一的时刻表对象（只声明一次）
+    // 统一的时刻表对象（保持为空）
     const timetables = {};
 
     // 时间处理辅助函数
@@ -78,44 +78,6 @@
       const mm = String(m%60).padStart(2,'0');
       return `${hh}:${mm}`;
     }
-
-    // 为“长福火车站”生成往木溪村方向的每日时刻表：06:30 首班，06:40 第二班，06:40 起每 5 分钟一班，至 23:10（包含）
-    (function addYunyingSchedule(){
-      const key = 'Changfuhouchezhan';
-      const schedule = [];
-      // 首班
-      schedule.push('06:30');
-      // 从 06:40 到 23:10 每 5 分钟
-      let t = timeToMinutes('06:40');
-      const end = timeToMinutes('23:10');
-      for (; t <= end; t += 5) {
-        schedule.push(minutesToTime(t));
-      }
-      // 去重以防万一（06:40 只出现一次）
-      const unique = Array.from(new Set(schedule));
-      timetables[key] = {
-        '往木溪村': unique
-      };
-    })();
-
-    / 为“云樱大道”生成往木溪村方向的每日时刻表：06:32 首班，06:42 第二班，06:42 起每 5 分钟一班，至 23:12（包含）
-    (function addYunyingSchedule(){
-      const key = 'yunyingdadao';
-      const schedule = [];
-      // 首班
-      schedule.push('06:32');
-      // 从 06:42 到 23:12 每 5 分钟
-      let t = timeToMinutes('06:42');
-      const end = timeToMinutes('23:12');
-      for (; t <= end; t += 5) {
-        schedule.push(minutesToTime(t));
-      }
-      // 去重以防万一（06:42 只出现一次）
-      const unique = Array.from(new Set(schedule));
-      timetables[key] = {
-        '往木溪村': unique
-      };
-    })();
 
     // 渲染线路下拉菜单
     const lineSelect = document.getElementById('lineSelect');
@@ -220,7 +182,7 @@
       const perLine = 8;
       let html = '<div style="text-align:left;display:inline-block;color:var(--muted)">';
       for (let i=0;i<times.length;i++){
-        if (i % perLine === 0) html += '<div style="margin:6px 0">';
+        if (i % perLine === 0) html += '<div style="margin:6px 0' + '">';
         html += `<span style="display:inline-block;width:72px">${times[i]}</span>`;
         if (i % perLine === perLine-1 || i === times.length-1) html += '</div>';
       }
