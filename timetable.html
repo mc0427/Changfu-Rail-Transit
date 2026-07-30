@@ -94,6 +94,39 @@
     // 当前选中线路（默认 1）
     let selectedLine = '1';
 
+    // 简单的时刻表存储结构：按站点拼音 -> 方向描述 -> 时间数组（HH:MM）
+    const timetables = {};
+
+    // 时间处理辅助函数
+    function timeToMinutes(t){
+      const [h,m] = t.split(':').map(Number);
+      return h*60 + m;
+    }
+    function minutesToTime(m){
+      const hh = String(Math.floor(m/60)).padStart(2,'0');
+      const mm = String(m%60).padStart(2,'0');
+      return `${hh}:${mm}`;
+    }
+
+    // 为“云樱大道”生成往木溪村方向的每日时刻表：06:32 首班，06:42 第二班，06:42 起每 5 分钟一班，至 23:12（包含）
+    (function addYunyingSchedule(){
+      const key = 'yunyingdadao';
+      const schedule = [];
+      // 首班
+      schedule.push('06:32');
+      // 从 06:42 到 23:12 每 5 分钟
+      let t = timeToMinutes('06:42');
+      const end = timeToMinutes('23:12');
+      for (; t <= end; t += 5) {
+        schedule.push(minutesToTime(t));
+      }
+      // 去重以防万一（06:42 只出现一次）
+      const unique = Array.from(new Set(schedule));
+      timetables[key] = {
+        '往木溪村': unique
+      };
+    })();
+
     // 渲染线路下拉菜单
     const lineSelect = document.getElementById('lineSelect');
     for (const l of lines) {
@@ -153,31 +186,56 @@
 
     function showTimetable(station) {
       const el = document.getElementById('timetable');
-      const tableForStation = timetables[station.name];
-      if(tableForStation){
-        // 列出各个方向的时刻表
-        let html = `<strong>${station.name}</strong>（${lines.find(l=>l.id===station.line).name}） 的今日时刻表：`;
-        for(const dir of Object.keys(tableForStation)){
-          html += `<br><div style="margin-top:8px;font-weight:600;">${dir}：</div><div style="text-align:left;margin:6px auto;max-width:420px;color:var(--muted)">`;
-          const times = tableForStation[dir];
-          // 把时间按行或分组显示，每行最多 8 个
-          const perLine = 8;
-          for(let i=0;i<times.length;i+=perLine){
-            const slice = times.slice(i,i+perLine);
-            html += slice.join('  ')+ '<br>';
+      const key = station.pinyin;
+      const lineName = lines.find(l=>l.id===station.line).name;
+
+      if (timetables[key]) {
+        // 如果有多个方向，列出方向按钮
+        const directions = Object.keys(timetables[key]);
+        if (directions.length === 1) {
+          const dir = directions[0];
+          const times = timetables[key][dir];
+          el.innerHTML = `<strong>${station.name}</strong>（${lineName}） ${dir} 的今日时刻表：<br>` + renderTimeList(times);
+        } else {
+          // 多方向：显示方向选择
+          let html = `<strong>${station.name}</strong>（${lineName}） 的今日时刻表：<br>`;
+          for (const dir of directions) {
+            html += `<div style="margin:8px 0"><button type="button" class="station" data-dir="${dir}">${dir}</button></div>`;
           }
-          html += '</div>';
+          html += '<div id="directionTimes" style="margin-top:8px;color:var(--muted)"></div>';
+          el.innerHTML = html;
+          // 给方向按钮绑定事件
+          el.querySelectorAll('button.station').forEach(b=>{
+            b.addEventListener('click', ()=>{
+              const dir = b.dataset.dir;
+              const times = timetables[key][dir];
+              document.getElementById('directionTimes').innerHTML = renderTimeList(times);
+            });
+          });
         }
-        el.innerHTML = html;
       } else {
-        // 这里插入后续对接真实时刻表的逻辑。目前展示占位信息。
-        el.innerHTML = `<strong>${station.name}</strong>（${lines.find(l=>l.id===station.line).name}） 的今日时刻表（示例）：<br><ul>
+        // 占位信息
+        el.innerHTML = `<strong>${station.name}</strong>（${lineName}） 的今日时刻表（示例）：<br><ul>
         <li>06:10 — 首班车</li>
         <li>07:30 — 高峰班次</li>
         <li>12:00 — 平峰班次</li>
         <li>18:20 — 末班车</li>
       </ul>`;
       }
+    }
+
+    function renderTimeList(times){
+      if (!times || times.length === 0) return '<div>暂无时刻信息。</div>';
+      // 为避免页面过长，适当将列表分为每行 8 个时间
+      const perLine = 8;
+      let html = '<div style="text-align:left;display:inline-block;color:var(--muted)">';
+      for (let i=0;i<times.length;i++){
+        if (i % perLine === 0) html += '<div style="margin:6px 0">';
+        html += `<span style="display:inline-block;width:72px">${times[i]}</span>`;
+        if (i % perLine === perLine-1 || i === times.length-1) html += '</div>';
+      }
+      html += '</div>';
+      return html;
     }
 
     // 初次渲染
