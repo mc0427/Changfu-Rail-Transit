@@ -62,6 +62,35 @@
       {name: '长福火车站', pinyin: 'changfuhuochezhan', line: '1'}
     ];
 
+    // 时刻表数据（按车站中文名索引）。
+    // 已为“长福火车站”录入：往木溪村方向，06:30 首班，06:40 第二班，随后从06:40起每5分钟一班至 23:10。
+    const timetables = {};
+
+    function pad(n){ return String(n).padStart(2,'0'); }
+    function generateTimes(startHHMM, endHHMM, stepMinutes){
+      const [sh, sm] = startHHMM.split(':').map(Number);
+      const [eh, em] = endHHMM.split(':').map(Number);
+      let start = sh*60 + sm;
+      const end = eh*60 + em;
+      const arr = [];
+      for(let t = start; t <= end; t += stepMinutes){
+        const hh = Math.floor(t/60) % 24;
+        const mm = t % 60;
+        arr.push(pad(hh) + ':' + pad(mm));
+      }
+      return arr;
+    }
+
+    timetables['长福火车站'] = {};
+    // 先加入 06:30，然后从 06:40 开始每5分钟到 23:10（包含 06:40 和 23:10）
+    timetables['长福火车站']['往木溪村'] = (function(){
+      const arr = ['06:30'];
+      const seq = generateTimes('06:40','23:10',5);
+      // 合并（确保不重复 06:40）
+      for(const t of seq){ if(!arr.includes(t)) arr.push(t); }
+      return arr;
+    })();
+
     // 当前选中线路（默认 1）
     let selectedLine = '1';
 
@@ -123,14 +152,32 @@
     }
 
     function showTimetable(station) {
-      // 这里插入后续对接真实时刻表的逻辑。目前展示占位信息。
       const el = document.getElementById('timetable');
-      el.innerHTML = `<strong>${station.name}</strong>（${lines.find(l=>l.id===station.line).name}） 的今日时刻表（示例）：<br><ul>
+      const tableForStation = timetables[station.name];
+      if(tableForStation){
+        // 列出各个方向的时刻表
+        let html = `<strong>${station.name}</strong>（${lines.find(l=>l.id===station.line).name}） 的今日时刻表：`;
+        for(const dir of Object.keys(tableForStation)){
+          html += `<br><div style="margin-top:8px;font-weight:600;">${dir}：</div><div style="text-align:left;margin:6px auto;max-width:420px;color:var(--muted)">`;
+          const times = tableForStation[dir];
+          // 把时间按行或分组显示，每行最多 8 个
+          const perLine = 8;
+          for(let i=0;i<times.length;i+=perLine){
+            const slice = times.slice(i,i+perLine);
+            html += slice.join('  ')+ '<br>';
+          }
+          html += '</div>';
+        }
+        el.innerHTML = html;
+      } else {
+        // 这里插入后续对接真实时刻表的逻辑。目前展示占位信息。
+        el.innerHTML = `<strong>${station.name}</strong>（${lines.find(l=>l.id===station.line).name}） 的今日时刻表（示例）：<br><ul>
         <li>06:10 — 首班车</li>
         <li>07:30 — 高峰班次</li>
         <li>12:00 — 平峰班次</li>
         <li>18:20 — 末班车</li>
       </ul>`;
+      }
     }
 
     // 初次渲染
