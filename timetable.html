@@ -138,9 +138,25 @@
       }
     }
 
-    // 立即生成时刻表（两个方向）
+    // 新增：生成区间车（木溪村 -> 桦甸）的时刻表
+    // 三班区间车由木溪村始发，终点为桦甸，发车时间：23:10、23:20、23:30
+    function generateShortTurnToHuadian(){
+      const shortStarts = ['23:10','23:20','23:30'];
+      const route = ['muxicun','yunqishijing','huadian'];
+      // 使用 offsetsToChangfu 作为相对于木溪村的偏移表
+      for (const station of route) {
+        const off = offsetsToChangfu[station] || 0;
+        const times = shortStarts.map(bt => minutesToTime(timeToMinutes(bt) + off));
+        timetables[station] = timetables[station] || {};
+        // 使用明确的方向名称以示区别
+        timetables[station]['区间：木溪村→桦甸'] = times;
+      }
+    }
+
+    // 立即生成时刻表（两个方向）并加入区间车
     generateTimetablesToChangfu();
     generateTimetablesToMuxicun();
+    generateShortTurnToHuadian();
 
     // 渲染线路下拉菜单 & 站点列表等 UI
     const lineSelect = document.getElementById('lineSelect');
@@ -158,7 +174,7 @@
     });
 
     function renderStations() {
-      // 过滤出当前线路的车站
+      // 过滤出当前线��的车站
       const filtered = stations.filter(s => s.line === selectedLine);
 
       // 按拼音排序（使用拼音排序规则）
