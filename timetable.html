@@ -21,6 +21,9 @@
     .station:active{transform:translateY(1px)}
     #timetable{margin-top:20px;color:var(--muted)}
     footer{margin-top:26px;color:var(--muted);font-size:13px}
+    .meta{margin-top:8px;color:var(--muted);font-size:14px}
+    .now-panel{margin-top:10px;display:flex;gap:12px;justify-content:center;align-items:center}
+    .now-panel .chip{background:#f1f5f9;padding:8px 10px;border-radius:8px;color:var(--muted)}
     @media(min-width:520px){.actions{flex-direction:row;justify-content:center}}
   </style>
 </head>
@@ -79,39 +82,41 @@
       return `${hh}:${mm}`;
     }
 
-    // 生成 1 号线往木溪村方向的时刻表
-    // 规则：长福火车站 06:30 首班，06:35 第二班；从 06:30 起每 5 分钟一班，直到 23:10（包含）。
     // 各站相对于长福火车站的出发时间偏移（分钟）
+    // 对应你给出的示例（首列时间：长福火车站 06:30；云樱大道 06:32；知音 06:34；南原大道 06:37；桦甸 06:39；云栖石镜 06:41；木溪村 06:42）
     const offsets = {
-      changfuhuochezhan: 0,
-      yunyingdadao: 2,
-      zhiyin: 4,
-      nanyuandadao: 7,
-      huadian: 9,
-      yunqishijing: 11,
-      muxicun: 12
+      changfuhuochezhan: 0,   // 06:30
+      yunyingdadao: 2,       // 06:32
+      zhiyin: 4,             // 06:34
+      nanyuandadao: 7,       // 06:37
+      huadian: 9,            // 06:39
+      yunqishijing: 11,      // 06:41
+      muxicun: 12            // 06:42
     };
 
-    (function generateDirectionToMuxicun(){
-      // 先生成长福火车站的基础发车时刻
-      const base = [];
-      base.push('06:30');
-      let t = timeToMinutes('06:35');
+    // 生成 1 号线往木溪村方向的时刻表
+    // 规则：长福火车站 06:30 首班；从 06:30 起每 5 分钟一班，直到 23:10（包含）。
+    function generateTimetablesToMuxicun(){
+      const start = timeToMinutes('06:30');
       const end = timeToMinutes('23:10');
-      for (; t <= end; t += 5) {
+      const base = [];
+      for (let t = start; t <= end; t += 5) {
         base.push(minutesToTime(t));
       }
-      // 去重（防止 06:35 重复）
-      const uniqueBase = Array.from(new Set(base));
 
       // 根据偏移生成各站时刻并写入 timetables
       for (const [key, off] of Object.entries(offsets)) {
-        const times = uniqueBase.map(bt => minutesToTime(timeToMinutes(bt) + off));
+        const times = base.map(bt => minutesToTime(timeToMinutes(bt) + off));
         timetables[key] = {
           '往木溪村': times
         };
       }
-    // 渲染线路下拉菜单
+    }
+
+    // 立即生成时刻表
+    generateTimetablesToMuxicun();
+
+    // 渲染线路下拉菜单 & 站点列表等 UI
     const lineSelect = document.getElementById('lineSelect');
     for (const l of lines) {
       const opt = document.createElement('option');
@@ -130,7 +135,7 @@
       // 过滤出当前线路的车站
       const filtered = stations.filter(s => s.line === selectedLine);
 
-      // 按拼音排序
+      // 按拼音排序（使用拼音排序规则）
       filtered.sort((a,b)=> a.pinyin.localeCompare(b.pinyin, 'zh-Hans-u-co-pinyin'));
 
       // 按首字母分组
@@ -168,7 +173,36 @@
       }
     }
 
-    function showTimetable(station) {
+    // 寻找上一班和下一班（基于本地当前时间）
+    function findPrevNext(times){
+      const now = new Date();
+      const nowMinutes = now.getHours()*60 + now.getMinutes();
+
+      let prev = null;
+      let next = null;
+      for (let i=0;i<times.length;i++){
+        const tMin = timeToMinutes(times[i]);
+        if (tMin <= nowMinutes) {
+          prev = times[i];
+        }
+        if (tMin > nowMinutes) {
+          next = times[i];
+          break;
+        }
+      }
+
+      // 处理首班前 / 末班后 情况
+      const first = times[0];
+      const last = times[times.length-1];
+      if (!prev) prev = null; // keep null to indicate no previous (before first)
+      if (!next) next = null; // null to indicate no next (after last)
+
+      return { prev, next, now: minutesToTime(nowMinutes) };
+    }
+
+    // 显示时刻表并附带上一班/下一班信息
+    // station: 对象；dirOptional: 用于多方向时指定方向
+    function showTimetable(station, dirOptional){
       const el = document.getElementById('timetable');
       const key = station.pinyin;
       const lineName = lines.find(l=>l.id===station.line).name;
@@ -180,6 +214,8 @@
           const dir = directions[0];
           const times = timetables[key][dir];
           el.innerHTML = `<strong>${station.name}</strong>（${lineName}） ${dir} 的今日时刻表：<br>` + renderTimeList(times);
+          // 显示上一班/下一班面板
+          renderNowPanel(el, times);
         } else {
           // 多方向：显示方向选择
           let html = `<strong>${station.name}</strong>（${lineName}） 的今日时刻表：<br>`;
@@ -193,12 +229,12 @@
             b.addEventListener('click', ()=>{
               const dir = b.dataset.dir;
               const times = timetables[key][dir];
-              document.getElementById('directionTimes').innerHTML = renderTimeList(times);
+              document.getElementById('directionTimes').innerHTML = renderTimeList(times) + renderNowPanelInline(times);
             });
           });
         }
       } else {
-        // 占位信息
+        // 占位信��
         el.innerHTML = `<strong>${station.name}</strong>（${lineName}） 的今日时刻表（示例）：<br><ul>
         <li>06:10 — 首班车</li>
         <li>07:30 — 高峰班次</li>
@@ -206,6 +242,50 @@
         <li>18:20 — 末班车</li>
       </ul>`;
       }
+    }
+
+    // 在容器外部（主时刻表下方）渲染现在/上一班/下一班信息，并添加刷新按钮
+    function renderNowPanel(containerEl, times){
+      const info = findPrevNext(times);
+      const nowText = `当前时间：${info.now}`;
+      const prevText = info.prev ? `上一班：${info.prev}` : '上一班：—（首班前）';
+      const nextText = info.next ? `下一班：${info.next}` : '下一班：—（末班已过）';
+
+      const panel = document.createElement('div');
+      panel.className = 'meta';
+      panel.innerHTML = `<div class="now-panel"><div class="chip">${nowText}</div><div class="chip">${prevText}</div><div class="chip">${nextText}</div><button id="refreshTimes" type="button" class="station" style="margin-left:6px">刷新</button></div>`;
+
+      containerEl.appendChild(panel);
+
+      const refreshBtn = panel.querySelector('#refreshTimes');
+      refreshBtn.addEventListener('click', ()=>{
+        // 重新计算并替换面板内容
+        panel.remove();
+        renderNowPanel(document.getElementById('timetable'), times);
+      });
+
+      // 自动每 30 秒更新一次面板（当面板仍在 DOM 中）
+      const intervalId = setInterval(()=>{
+        if (!document.body.contains(panel)) {
+          clearInterval(intervalId);
+          return;
+        }
+        // 更新 texts
+        const newInfo = findPrevNext(times);
+        panel.querySelectorAll('.chip')[0].textContent = `当前时间：${newInfo.now}`;
+        panel.querySelectorAll('.chip')[1].textContent = newInfo.prev ? `上一班：${newInfo.prev}` : '上一班：—（首班前）';
+        panel.querySelectorAll('.chip')[2].textContent = newInfo.next ? `下一班：${newInfo.next}` : '下一班：—（末班已过）';
+      }, 30000);
+    }
+
+    // 辅助版本：返回 HTML 用于嵌入到方向面板内部
+    function renderNowPanelInline(times){
+      const info = findPrevNext(times);
+      const nowText = `当前时间：${info.now}`;
+      const prevText = info.prev ? `上一班：${info.prev}` : '上一班：—（首班前）';
+      const nextText = info.next ? `下一班：${info.next}` : '下一班：—（末班已过）';
+
+      return `<div class="meta"><div class="now-panel"><div class="chip">${nowText}</div><div class="chip">${prevText}</div><div class="chip">${nextText}</div></div></div>`;
     }
 
     function renderTimeList(times){
