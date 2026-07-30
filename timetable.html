@@ -149,7 +149,7 @@
         const times = shortStarts.map(bt => minutesToTime(timeToMinutes(bt) + off));
         timetables[station] = timetables[station] || {};
         // 使用明确的方向名称以示区别
-        timetables[station]['区间：木溪村→桦甸'] = times;
+        timetables[station]['长福火车站方向（桦甸回库车）'] = times;
       }
     }
 
@@ -267,7 +267,7 @@
         }
       } else {
         el.innerHTML = `<strong>${station.name}</strong>（${lineName}） 的今日时刻表（示例）：<br><ul>
-        <li>06:10 — 首班车</li>
+        <li>06:15 — 首班车</li>
         <li>07:30 — 高峰班次</li>
         <li>12:00 — 平峰班次</li>
         <li>18:20 — 末班车</li>
