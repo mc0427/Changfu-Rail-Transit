@@ -376,7 +376,7 @@
     function renderTimeList(times){
       if (!times || times.length === 0) return '<div>暂无时刻信息。</div>';
       const perLine = 8;
-      let html = '<div style="text-align:left;display:inline-block;color:var(--muted)">';
+      let html = '<div style="text-align:left;display:inline-block;color:var(--muted)'>;
       for (let i=0;i<times.length;i++){
         if (i % perLine === 0) html += '<div style="margin:6px 0' + "">";
         html += `<span style="display:inline-block;width:72px">${times[i]}</span>`;
