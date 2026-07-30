@@ -22,7 +22,7 @@
     #timetable{margin-top:20px;color:var(--muted)}
     footer{margin-top:26px;color:var(--muted);font-size:13px}
     .meta{margin-top:8px;color:var(--muted);font-size:14px}
-    .now-panel{margin-top:10px;display:flex;gap:12px;justify-content:center;align-items:center}
+    .now-panel{margin-top:10px;display:flex;gap:12px;justify-content:center;align-items:center;flex-wrap:wrap}
     .now-panel .chip{background:#f1f5f9;padding:8px 10px;border-radius:8px;color:var(--muted)}
     @media(min-width:520px){.actions{flex-direction:row;justify-content:center}}
   </style>
@@ -83,8 +83,6 @@
     }
 
     // 各站相对于木溪村的出发时间偏移（往长福火车站方向，按示例对齐）
-    // 示例首班对应关系：木溪村 06:30 -> 长福火车站 06:40，因此偏移为：
-    // muxicun:0, yunqishijing:+1, huadian:+3, nanyuandadao:+4, zhiyin:+6, yunyingdadao:+8, changfuhuochezhan:+10
     const offsetsToChangfu = {
       muxicun: 0,
       yunqishijing: 1,
@@ -95,7 +93,7 @@
       changfuhuochezhan: 10
     };
 
-    // 各站相对于长福火车站的出发时间偏移（往木溪村方向，保持原有）
+    // 各站相对于长福火车站的出发时间偏移（往木溪村方向，保持备用）
     const offsetsToMuxicun = {
       changfuhuochezhan: 0,
       yunyingdadao: 2,
@@ -204,22 +202,23 @@
     // 寻找上一班和下一班（基于本地当前时间）
     function findPrevNext(times){
       const now = new Date();
-      const nowMinutes = now.getHours()*60 + now.getMinutes();
+      const nowSeconds = now.getHours()*3600 + now.getMinutes()*60 + now.getSeconds();
 
       let prev = null;
       let next = null;
       for (let i=0;i<times.length;i++){
-        const tMin = timeToMinutes(times[i]);
-        if (tMin <= nowMinutes) {
+        const tSec = timeToMinutes(times[i]) * 60;
+        if (tSec <= nowSeconds) {
           prev = times[i];
         }
-        if (tMin > nowMinutes) {
+        if (tSec > nowSeconds) {
           next = times[i];
           break;
         }
       }
 
-      return { prev, next, now: minutesToTime(nowMinutes) };
+      const nowMinStr = minutesToTime(Math.floor(nowSeconds/60));
+      return { prev, next, now: nowMinStr };
     }
 
     // 显示时刻表并附带上一班/下一班信息
@@ -260,44 +259,102 @@
       }
     }
 
-    // 渲染现在/上一班/下一班面板
+    // 渲染现在/上一班/下一班面板，添加精确到秒的倒计时
     function renderNowPanel(containerEl, times){
+      // 初始文本
       const info = findPrevNext(times);
       const nowText = `当前时间：${info.now}`;
       const prevText = info.prev ? `上一班：${info.prev}` : '上一班：—（首班前）';
       const nextText = info.next ? `下一班：${info.next}` : '下一班：—（末班已过）';
+      const countdownText = info.next ? computeCountdownText(times) : '—';
 
       const panel = document.createElement('div');
       panel.className = 'meta';
-      panel.innerHTML = `<div class="now-panel"><div class="chip">${nowText}</div><div class="chip">${prevText}</div><div class="chip">${nextText}</div><button id="refreshTimes" type="button" class="station" style="margin-left:6px">刷新</button></div>`;
+      panel.innerHTML = `<div class="now-panel">
+        <div class="chip" id="nowChip">${nowText}</div>
+        <div class="chip" id="prevChip">${prevText}</div>
+        <div class="chip" id="nextChip">${nextText}</div>
+        <div class="chip" id="countdownChip">下一班倒计时：${countdownText}</div>
+        <button id="refreshTimes" type="button" class="station" style="margin-left:6px">刷新</button>
+      </div>`;
 
       containerEl.appendChild(panel);
 
       const refreshBtn = panel.querySelector('#refreshTimes');
+
+      // 更新函数（每秒执行），并保存 intervalId 以便清理
+      let intervalId = null;
+      function updatePanel(){
+        const now = new Date();
+        const nowSeconds = now.getHours()*3600 + now.getMinutes()*60 + now.getSeconds();
+
+        // 更新当前时间显示（到分）
+        panel.querySelector('#nowChip').textContent = `当前时间：${minutesToTime(Math.floor(nowSeconds/60))}`;
+
+        // 重新计算 prev/next
+        let prev = null, next = null;
+        for (let i=0;i<times.length;i++){
+          const tSec = timeToMinutes(times[i]) * 60;
+          if (tSec <= nowSeconds) prev = times[i];
+          if (tSec > nowSeconds) { next = times[i]; break; }
+        }
+        panel.querySelector('#prevChip').textContent = prev ? `上一班：${prev}` : '上一班：—（首班前）';
+        panel.querySelector('#nextChip').textContent = next ? `下一班：${next}` : '下一班：—（末班已过）';
+
+        // 倒计时
+        if (next) {
+          const tSec = timeToMinutes(next) * 60;
+          let diff = tSec - nowSeconds;
+          if (diff < 0) diff = 0;
+          const mm = Math.floor(diff/60);
+          const ss = diff % 60;
+          panel.querySelector('#countdownChip').textContent = `下一班倒计时：${mm}分${String(ss).padStart(2,'0')}秒`;
+        } else {
+          panel.querySelector('#countdownChip').textContent = '下一班倒计时：—';
+        }
+
+        // 当面板不在 DOM 中时自动停止定时器
+        if (!document.body.contains(panel) && intervalId) {
+          clearInterval(intervalId);
+        }
+      }
+
+      // 立即运行一次并启动每秒更新
+      updatePanel();
+      intervalId = setInterval(updatePanel, 1000);
+
+      // 刷新按钮：清理并重建面板
       refreshBtn.addEventListener('click', ()=>{
+        if (intervalId) clearInterval(intervalId);
         panel.remove();
         renderNowPanel(document.getElementById('timetable'), times);
       });
-
-      const intervalId = setInterval(()=>{
-        if (!document.body.contains(panel)) {
-          clearInterval(intervalId);
-          return;
-        }
-        const newInfo = findPrevNext(times);
-        panel.querySelectorAll('.chip')[0].textContent = `当前时间：${newInfo.now}`;
-        panel.querySelectorAll('.chip')[1].textContent = newInfo.prev ? `上一班：${newInfo.prev}` : '上一班：—（首班前）';
-        panel.querySelectorAll('.chip')[2].textContent = newInfo.next ? `下一班：${newInfo.next}` : '下一班：—（末班已过）';
-      }, 30000);
     }
 
+    // 内嵌版本：返回 HTML 字符串并带倒计时（以秒为粒度的显示将由主面板的定时器更新；嵌入版为静态快照）
     function renderNowPanelInline(times){
       const info = findPrevNext(times);
       const nowText = `当前时间：${info.now}`;
       const prevText = info.prev ? `上一班：${info.prev}` : '上一班：—（首班前）';
       const nextText = info.next ? `下一班：${info.next}` : '下一班：—（末班已过）';
+      const countdownText = info.next ? computeCountdownText(times) : '—';
+      return `<div class="meta"><div class="now-panel"><div class="chip">${nowText}</div><div class="chip">${prevText}</div><div class="chip">${nextText}</div><div class="chip">下一班倒计时：${countdownText}</div></div></div>`;
+    }
 
-      return `<div class="meta"><div class="now-panel"><div class="chip">${nowText}</div><div class="chip">${prevText}</div><div class="chip">${nextText}</div></div></div>`;
+    // 计算静态倒计时文本（用于首次渲染或内嵌显示）
+    function computeCountdownText(times){
+      const now = new Date();
+      const nowSeconds = now.getHours()*3600 + now.getMinutes()*60 + now.getSeconds();
+      for (let i=0;i<times.length;i++){
+        const tSec = timeToMinutes(times[i]) * 60;
+        if (tSec > nowSeconds) {
+          const diff = tSec - nowSeconds;
+          const mm = Math.floor(diff/60);
+          const ss = diff % 60;
+          return `${mm}分${String(ss).padStart(2,'0')}秒`;
+        }
+      }
+      return '—';
     }
 
     function renderTimeList(times){
