@@ -13,9 +13,11 @@
     .actions{display:flex;flex-direction:column;gap:14px;margin-top:20px}
     a.btn{display:inline-block;padding:12px 16px;border-radius:10px;text-decoration:none;color:#fff;background:var(--primary);font-weight:600}
     a.btn.secondary{background:#6b7280}
+    .controls{display:flex;gap:12px;align-items:center;justify-content:center;margin-top:12px}
+    select{padding:8px 10px;border-radius:8px;border:1px solid #e6eefb;background:#fff}
     .station-list{margin-top:18px;text-align:left}
     .initial{font-weight:700;margin-top:16px}
-    .station{display:inline-block;margin:6px 8px;padding:8px 12px;border-radius:10px;background:#eef6ff;color:var(--primary);cursor:pointer}
+    .station{display:inline-block;margin:6px 8px;padding:8px 12px;border-radius:10px;background:#eef6ff;color:var(--primary);cursor:pointer;border:0}
     .station:active{transform:translateY(1px)}
     #timetable{margin-top:20px;color:var(--muted)}
     footer{margin-top:26px;color:var(--muted);font-size:13px}
@@ -25,10 +27,15 @@
 <body>
   <main class="container">
     <h1>车站时刻表</h1>
-    <p class="lead">请选择车站查看时刻表（按汉字拼音首字母排序）</p>
+    <p class="lead">请选择线路与车站查看时刻表（车站按汉字拼音首字母排序）</p>
 
     <div class="actions">
       <a class="btn secondary" href="index.html">返回首页</a>
+    </div>
+
+    <div class="controls">
+      <label for="lineSelect">线路：</label>
+      <select id="lineSelect" aria-label="选择线路"></select>
     </div>
 
     <div id="stationContainer" class="station-list" aria-live="polite"></div>
@@ -39,58 +46,95 @@
   </main>
 
   <script>
-    // 初始录入车站（name: 中文名, pinyin: 用于排序的拼音）
-    const stations = [
-      {name: '木溪村', pinyin: 'muxicun'},
-      {name: '云栖石镜', pinyin: 'yunqishijing'},
-      {name: '桦甸', pinyin: 'huadian'},
-      {name: '南原大道', pinyin: 'nanyuandadao'},
-      {name: '知音', pinyin: 'zhiyin'},
-      {name: '云樱大道', pinyin: 'yunyingdadao'},
-      {name: '长福火车站', pinyin: 'changfuhuochezhan'}
+    // 线路定义（目前只有1号线）
+    const lines = [
+      { id: '1', name: '1号线', color: '#0b71d5' }
     ];
 
-    // 将车站按拼音排序，然后按首字母分组
-    stations.sort((a,b)=> a.pinyin.localeCompare(b.pinyin, 'zh-Hans-u-co-pinyin'));
+    // 初始录入车站（name: 中文名, pinyin: 用于排序的拼音, line: 所属线路id）
+    const stations = [
+      {name: '木溪村', pinyin: 'muxicun', line: '1'},
+      {name: '云栖石镜', pinyin: 'yunqishijing', line: '1'},
+      {name: '桦甸', pinyin: 'huadian', line: '1'},
+      {name: '南原大道', pinyin: 'nanyuandadao', line: '1'},
+      {name: '知音', pinyin: 'zhiyin', line: '1'},
+      {name: '云樱大道', pinyin: 'yunyingdadao', line: '1'},
+      {name: '长福火车站', pinyin: 'changfuhuochezhan', line: '1'}
+    ];
 
-    const grouped = {};
-    for (const s of stations) {
-      const initial = s.pinyin.charAt(0).toUpperCase();
-      if (!grouped[initial]) grouped[initial] = [];
-      grouped[initial].push(s);
+    // 当前选中线路（默认 1）
+    let selectedLine = '1';
+
+    // 渲染线路下拉菜单
+    const lineSelect = document.getElementById('lineSelect');
+    for (const l of lines) {
+      const opt = document.createElement('option');
+      opt.value = l.id;
+      opt.textContent = l.name;
+      lineSelect.appendChild(opt);
     }
+    lineSelect.value = selectedLine;
+    lineSelect.addEventListener('change', ()=> {
+      selectedLine = lineSelect.value;
+      renderStations();
+      document.getElementById('timetable').innerHTML = '尚未选择车站。';
+    });
 
-    const container = document.getElementById('stationContainer');
+    function renderStations() {
+      // 过滤出当前线路的车站
+      const filtered = stations.filter(s => s.line === selectedLine);
 
-    for (const initial of Object.keys(grouped).sort()) {
-      const h = document.createElement('div');
-      h.className = 'initial';
-      h.textContent = initial;
-      container.appendChild(h);
+      // 按拼音排序
+      filtered.sort((a,b)=> a.pinyin.localeCompare(b.pinyin, 'zh-Hans-u-co-pinyin'));
 
-      const row = document.createElement('div');
-      for (const s of grouped[initial]) {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'station';
-        btn.textContent = s.name;
-        btn.dataset.pinyin = s.pinyin;
-        btn.addEventListener('click', ()=> showTimetable(s));
-        row.appendChild(btn);
+      // 按首字母分组
+      const grouped = {};
+      for (const s of filtered) {
+        const initial = s.pinyin.charAt(0).toUpperCase();
+        if (!grouped[initial]) grouped[initial] = [];
+        grouped[initial].push(s);
       }
-      container.appendChild(row);
+
+      const container = document.getElementById('stationContainer');
+      container.innerHTML = '';
+
+      for (const initial of Object.keys(grouped).sort()) {
+        const h = document.createElement('div');
+        h.className = 'initial';
+        h.textContent = initial;
+        container.appendChild(h);
+
+        const row = document.createElement('div');
+        for (const s of grouped[initial]) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'station';
+          btn.textContent = s.name;
+          btn.dataset.pinyin = s.pinyin;
+          btn.addEventListener('click', ()=> showTimetable(s));
+          row.appendChild(btn);
+        }
+        container.appendChild(row);
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div class="initial">—</div><div>当前线路暂无车站。</div>';
+      }
     }
 
     function showTimetable(station) {
       // 这里插入后续对接真实时刻表的逻辑。目前展示占位信息。
       const el = document.getElementById('timetable');
-      el.innerHTML = `<strong>${station.name}</strong> 的今日时刻表（示例）：<br><ul>
+      el.innerHTML = `<strong>${station.name}</strong>（${lines.find(l=>l.id===station.line).name}） 的今日时刻表（示例）：<br><ul>
         <li>06:10 — 首班车</li>
         <li>07:30 — 高峰班次</li>
         <li>12:00 — 平峰班次</li>
         <li>18:20 — 末班车</li>
       </ul>`;
     }
+
+    // 初次渲染
+    renderStations();
   </script>
 </body>
 </html>
