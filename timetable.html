@@ -15,6 +15,10 @@
     a.btn.secondary{background:#6b7280}
     .controls{display:flex;gap:12px;align-items:center;justify-content:center;margin-top:12px}
     select{padding:8px 10px;border-radius:8px;border:1px solid #e6eefb;background:#fff}
+    .line-bar{display:flex;gap:10px;overflow-x:auto;padding:8px 4px;margin:10px 0;-webkit-overflow-scrolling:touch}
+    .line-item{flex:0 0 auto;padding:8px 14px;border-radius:999px;background:#eef6ff;color:var(--primary);cursor:pointer;border:0;font-weight:600}
+    .line-item:active{transform:translateY(1px)}
+    .line-item.active{background:var(--primary);color:#fff}
     .station-list{margin-top:18px;text-align:left}
     .initial{font-weight:700;margin-top:16px}
     .station{display:inline-block;margin:6px 8px;padding:8px 12px;border-radius:10px;background:#eef6ff;color:var(--primary);cursor:pointer;border:0}
@@ -37,8 +41,8 @@
     </div>
 
     <div class="controls">
-      <label for="lineSelect">线路：</label>
-      <select id="lineSelect" aria-label="选择线路"></select>
+      <label for="lineBar">线路：</label>
+      <div id="lineBar" class="line-bar" role="tablist" aria-label="线路选择"></div>
     </div>
 
     <div id="stationContainer" class="station-list" aria-live="polite"></div>
@@ -93,7 +97,7 @@
       changfuhuochezhan: 10
     };
 
-    // 各站相对于长福火车站的出发时间偏移（往木溪村方向，保持备用）
+    // 各站相对于长福火车站的出发时间偏移（往木溪村��向，保持备用）
     const offsetsToMuxicun = {
       changfuhuochezhan: 0,
       yunyingdadao: 2,
@@ -158,20 +162,27 @@
     generateTimetablesToMuxicun();
     generateShortTurnToHuadian();
 
-    // 渲染线路下拉菜单 & 站点列表等 UI
-    const lineSelect = document.getElementById('lineSelect');
-    for (const l of lines) {
-      const opt = document.createElement('option');
-      opt.value = l.id;
-      opt.textContent = l.name;
-      lineSelect.appendChild(opt);
+    // 渲染线路栏 & 站点列表等 UI
+    const lineBar = document.getElementById('lineBar');
+    function renderLineBar(){
+      lineBar.innerHTML = '';
+      for (const l of lines) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'line-item' + (l.id === selectedLine ? ' active' : '');
+        btn.textContent = l.name;
+        btn.dataset.id = l.id;
+        btn.addEventListener('click', ()=>{
+          selectedLine = l.id;
+          renderLineBar();
+          renderStations();
+          document.getElementById('timetable').innerHTML = '尚未选择车站。';
+          // 保持 focus 可见性
+          btn.focus();
+        });
+        lineBar.appendChild(btn);
+      }
     }
-    lineSelect.value = selectedLine;
-    lineSelect.addEventListener('change', ()=> {
-      selectedLine = lineSelect.value;
-      renderStations();
-      document.getElementById('timetable').innerHTML = '尚未选择车站。';
-    });
 
     function renderStations() {
       // 过滤出当前线的车站
@@ -387,6 +398,7 @@
     }
 
     // 初次渲染
+    renderLineBar();
     renderStations();
   </script>
 </body>
