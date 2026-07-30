@@ -65,7 +65,7 @@
     // 当前选中线路（默认 1）
     let selectedLine = '1';
 
-    // 统一的时刻表对象（保持为空）
+    // 统一的时刻表对象（将由下面生成器填充）
     const timetables = {};
 
     // 时间处理辅助函数
@@ -78,6 +78,40 @@
       const mm = String(m%60).padStart(2,'0');
       return `${hh}:${mm}`;
     }
+
+    // 生成 1 号线往木溪村方向的时刻表
+    // 规则：长福火车站 06:30 首班，06:40 第二班；从 06:40 起每 5 分钟一班，直到 23:10（包含）。
+    // 各站相对于长福火车站的出发时间偏移（分钟）
+    const offsets = {
+      changfuhuochezhan: 0,
+      yunyingdadao: 2,
+      zhiyin: 4,
+      nanyuandadao: 7,
+      huadian: 9,
+      yunqishijing: 11,
+      muxicun: 12
+    };
+
+    (function generateDirectionToMuxicun(){
+      // 先生成长福火车站的基础发车时刻
+      const base = [];
+      base.push('06:30');
+      let t = timeToMinutes('06:40');
+      const end = timeToMinutes('23:10');
+      for (; t <= end; t += 5) {
+        base.push(minutesToTime(t));
+      }
+      // 去重（防止 06:40 重复）
+      const uniqueBase = Array.from(new Set(base));
+
+      // 根据偏移生成各站时刻并写入 timetables
+      for (const [key, off] of Object.entries(offsets)) {
+        const times = uniqueBase.map(bt => minutesToTime(timeToMinutes(bt) + off));
+        timetables[key] = {
+          '往木溪村': times
+        };
+      }
+    })();
 
     // 渲染线路下拉菜单
     const lineSelect = document.getElementById('lineSelect');
@@ -182,7 +216,7 @@
       const perLine = 8;
       let html = '<div style="text-align:left;display:inline-block;color:var(--muted)">';
       for (let i=0;i<times.length;i++){
-        if (i % perLine === 0) html += '<div style="margin:6px 0' + '">';
+        if (i % perLine === 0) html += '<div style="margin:6px 0">';
         html += `<span style="display:inline-block;width:72px">${times[i]}</span>`;
         if (i % perLine === perLine-1 || i === times.length-1) html += '</div>';
       }
