@@ -79,7 +79,26 @@
       return `${hh}:${mm}`;
     }
 
-    // 为“云樱大道”生成往木溪村方向的每日时刻表：06:32 首班，06:42 第二班，06:42 起每 5 分钟一班，至 23:12（包含）
+    // 为“长福火车站”生成往木溪村方向的每日时刻表：06:30 首班，06:40 第二班，06:40 起每 5 分钟一班，至 23:10（包含）
+    (function addYunyingSchedule(){
+      const key = 'yunyingdadao';
+      const schedule = [];
+      // 首班
+      schedule.push('06:30');
+      // 从 06:40 到 23:10 每 5 分钟
+      let t = timeToMinutes('06:40');
+      const end = timeToMinutes('23:10');
+      for (; t <= end; t += 5) {
+        schedule.push(minutesToTime(t));
+      }
+      // 去重以防万一（06:40 只出现一次）
+      const unique = Array.from(new Set(schedule));
+      timetables[key] = {
+        '往木溪村': unique
+      };
+    })();
+
+    / 为“云樱大道”生成往木溪村方向的每日时刻表：06:32 首班，06:42 第二班，06:42 起每 5 分钟一班，至 23:12（包含）
     (function addYunyingSchedule(){
       const key = 'yunyingdadao';
       const schedule = [];
