@@ -111,6 +111,33 @@
           '往木溪村': times
         };
       }
+
+      // 额外：桦甸始发的区间车（只向木溪村方向），每天早上在以下时刻从桦甸出发：06:15,06:20,06:25,06:30,06:35
+      // 这些列车只经过 桦甸 -> 云栖石镜 -> 木溪村 三站（不经过始发站之前的站点）
+      const huadianStarts = ['06:15','06:20','06:25','06:30','06:35'];
+      // 计算其在相邻站点的时刻（相对于桦甸）：云栖石镜 +2 分钟，木溪村 +3 分钟
+      huadianStarts.forEach(start => {
+        // 桦甸
+        if (!timetables['huadian']) timetables['huadian'] = {'往木溪村': []};
+        timetables['huadian']['往木溪村'].push(start);
+        // 云栖石镜
+        const atYunqi = minutesToTime(timeToMinutes(start) + (offsets['yunqishijing'] - offsets['huadian']));
+        if (!timetables['yunqishijing']) timetables['yunqishijing'] = {'往木溪村': []};
+        timetables['yunqishijing']['往木溪村'].push(atYunqi);
+        // 木溪村
+        const atMuxi = minutesToTime(timeToMinutes(start) + (offsets['muxicun'] - offsets['huadian']));
+        if (!timetables['muxicun']) timetables['muxicun'] = {'往木溪村': []};
+        timetables['muxicun']['往木溪村'].push(atMuxi);
+      });
+
+      // 对所有站点的时刻列表去重并排序
+      for (const key of Object.keys(timetables)) {
+        const dir = '往木溪村';
+        const list = timetables[key][dir] || [];
+        const unique = Array.from(new Set(list));
+        unique.sort((a,b)=> timeToMinutes(a) - timeToMinutes(b));
+        timetables[key][dir] = unique;
+      }
     })();
 
     // 渲染线路下拉菜单
