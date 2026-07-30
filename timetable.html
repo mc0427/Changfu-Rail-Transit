@@ -62,39 +62,10 @@
       {name: '长福火车站', pinyin: 'changfuhuochezhan', line: '1'}
     ];
 
-    // 时刻表数据（按车站中文名索引）。
-    // 已为“长福火车站”录入：往木溪村方向，06:30 首班，06:40 第二班，随后从06:40起每5分钟一班至 23:10。
-    const timetables = {};
-
-    function pad(n){ return String(n).padStart(2,'0'); }
-    function generateTimes(startHHMM, endHHMM, stepMinutes){
-      const [sh, sm] = startHHMM.split(':').map(Number);
-      const [eh, em] = endHHMM.split(':').map(Number);
-      let start = sh*60 + sm;
-      const end = eh*60 + em;
-      const arr = [];
-      for(let t = start; t <= end; t += stepMinutes){
-        const hh = Math.floor(t/60) % 24;
-        const mm = t % 60;
-        arr.push(pad(hh) + ':' + pad(mm));
-      }
-      return arr;
-    }
-
-    timetables['长福火车站'] = {};
-    // 先加入 06:30，然后从 06:40 开始每5分钟到 23:10（包含 06:40 和 23:10）
-    timetables['长福火车站']['往木溪村'] = (function(){
-      const arr = ['06:30'];
-      const seq = generateTimes('06:40','23:10',5);
-      // 合并（确保不重复 06:40）
-      for(const t of seq){ if(!arr.includes(t)) arr.push(t); }
-      return arr;
-    })();
-
     // 当前选中线路（默认 1）
     let selectedLine = '1';
 
-    // 简单的时刻表存储结构：按站点拼音 -> 方向描述 -> 时间数组（HH:MM）
+    // 统一的时刻表对象（只声明一次）
     const timetables = {};
 
     // 时间处理辅助函数
