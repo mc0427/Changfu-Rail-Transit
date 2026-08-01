@@ -49,7 +49,7 @@
   </main>
 
   <script>
-    // 初始车站数据（name: 中文名, pinyin: 用于排序）
+    // 基本数据
     const stations = [
       {name: '木溪村', pinyin: 'muxicun'},
       {name: '云栖石镜', pinyin: 'yunqishijing'},
@@ -60,125 +60,218 @@
       {name: '长福火车站', pinyin: 'changfuhuochezhan'}
     ];
 
-    // 统一的时刻表对象（由生成器填充）
     const timetables = {};
 
-    // 时间辅助
-    function timeToMinutes(t){ const [h,m] = t.split(':').map(Number); return h*60 + m; }
-    function minutesToTime(m){ const hh = String(Math.floor(m/60)).padStart(2,'0'); const mm = String(m%60).padStart(2,'0'); return `${hh}:${mm}`; }
+    // 工具：时间转换
+    function timeToMinutes(t){
+      const parts = String(t).split(':').map(Number);
+      if (parts.length < 2) return 0;
+      return parts[0]*60 + parts[1];
+    }
+    function minutesToTime(m){
+      m = Math.round(m);
+      const hh = String(Math.floor(m/60)).padStart(2,'0');
+      const mm = String(m%60).padStart(2,'0');
+      return `${hh}:${mm}`;
+    }
 
+    // 站点到目标的偏移（分钟）
     const offsetsToChangfu = { muxicun:0, yunqishijing:1, huadian:3, nanyuandadao:4, zhiyin:6, yunyingdadao:8, changfuhuochezhan:10 };
     const offsetsToMuxicun = { changfuhuochezhan:0, yunyingdadao:2, zhiyin:4, nanyuandadao:7, huadian:9, yunqishijing:11, muxicun:12 };
 
     function generateTimetablesToChangfu(){
-      const start = timeToMinutes('06:15'); const end = timeToMinutes('23:00'); const base = [];
-      for (let t=start;t<=end;t+=5) base.push(minutesToTime(t));
-      for (const [key,off] of Object.entries(offsetsToChangfu)){
+      const start = timeToMinutes('06:15');
+      const end = timeToMinutes('23:00');
+      const base = [];
+      for (let t = start; t <= end; t += 5) base.push(minutesToTime(t));
+      for (const [key, off] of Object.entries(offsetsToChangfu)){
         const times = base.map(bt => minutesToTime(timeToMinutes(bt) + off));
         timetables[key] = timetables[key] || {};
         timetables[key]['往长福火车站'] = times;
       }
     }
+
     function generateTimetablesToMuxicun(){
-      const start = timeToMinutes('06:30'); const end = timeToMinutes('23:10'); const base = [];
-      for (let t=start;t<=end;t+=5) base.push(minutesToTime(t));
-      for (const [key,off] of Object.entries(offsetsToMuxicun)){
+      const start = timeToMinutes('06:30');
+      const end = timeToMinutes('23:10');
+      const base = [];
+      for (let t = start; t <= end; t += 5) base.push(minutesToTime(t));
+      for (const [key, off] of Object.entries(offsetsToMuxicun)){
         const times = base.map(bt => minutesToTime(timeToMinutes(bt) + off));
         timetables[key] = timetables[key] || {};
         timetables[key]['往木溪村'] = times;
       }
     }
+
     function generateShortTurnToHuadian(){
-      const shortStarts = ['23:10','23:20','23:30']; const route = ['muxicun','yunqishijing','huadian'];
-      for (const station of route){ const off = offsetsToChangfu[station] || 0; const times = shortStarts.map(bt => minutesToTime(timeToMinutes(bt) + off)); timetables[station] = timetables[station] || {}; timetables[station]['长福火车站方向（桦甸回库车）'] = times; }
+      // 末班后的短倒班示例（23:10, 23:20, 23:30 出发）
+      const shortStarts = ['23:10','23:20','23:30'];
+      const route = ['muxicun','yunqishijing','huadian'];
+      // 假设 offsetsToChangfu 中的偏移可用
+      for (const station of route){
+        const off = offsetsToChangfu[station] || 0;
+        const times = shortStarts.map(bt => minutesToTime(timeToMinutes(bt) + off));
+        timetables[station] = timetables[station] || {};
+        timetables[station]['末班短转（示例）'] = times;
+      }
     }
 
+    // 生成表
     generateTimetablesToChangfu();
     generateTimetablesToMuxicun();
     generateShortTurnToHuadian();
 
-    // 渲染车站列表（按拼音音序），支持搜索
+    // 渲染站点列表
     const stationContainer = document.getElementById('stationContainer');
     const searchInput = document.getElementById('searchInput');
     const clearSearchBtn = document.getElementById('clearSearch');
+    const timetableEl = document.getElementById('timetable');
 
     function renderStations(){
       const q = (searchInput.value || '').trim().toLowerCase();
-      // 过滤并排序
       const filtered = stations.filter(s => {
         if (!q) return true;
         return s.name.includes(q) || s.pinyin.includes(q);
       }).slice().sort((a,b) => a.pinyin.localeCompare(b.pinyin, 'zh-Hans-u-co-pinyin'));
 
-      // 按首字母分组展示
       const grouped = {};
       for (const s of filtered){
         const initial = s.pinyin.charAt(0).toUpperCase();
-        if (!grouped[initial]) grouped[initial]=[];
+        if (!grouped[initial]) grouped[initial] = [];
         grouped[initial].push(s);
       }
 
       stationContainer.innerHTML = '';
-      if (filtered.length === 0){ stationContainer.innerHTML = '<div class="initial">—</div><div>未找到匹配的车站。</div>'; return; }
+      if (filtered.length === 0){
+        stationContainer.innerHTML = '<div class="initial">—</div><div>未找到匹配的车站。</div>';
+        return;
+      }
 
       for (const initial of Object.keys(grouped).sort()){
         const h = document.createElement('div'); h.className='initial'; h.textContent=initial; stationContainer.appendChild(h);
         const row = document.createElement('div');
         for (const s of grouped[initial]){
-          const btn = document.createElement('button'); btn.type='button'; btn.className='station'; btn.textContent=s.name; btn.dataset.pinyin = s.pinyin; btn.addEventListener('click', ()=> showTimetable(s)); row.appendChild(btn);
+          const btn = document.createElement('button');
+          btn.type='button';
+          btn.className='station';
+          btn.textContent = s.name;
+          btn.dataset.pinyin = s.pinyin;
+          btn.addEventListener('click', ()=> showTimetable(s));
+          row.appendChild(btn);
         }
         stationContainer.appendChild(row);
       }
     }
 
-    // 寻找上一班和下一班
+    // 查找上一班/下一班
     function findPrevNext(times){
-      const now = new Date(); const nowSeconds = now.getHours()*3600 + now.getMinutes()*60 + now.getSeconds();
-      let prev=null, next=null; for (let i=0;i<times.length;i++){ const tSec = timeToMinutes(times[i]) * 60; if (tSec <= nowSeconds) prev = times[i]; if (tSec > nowSeconds) { next = times[i]; break; } }
-      const nowMinStr = minutesToTime(Math.floor(nowSeconds/60)); return { prev, next, now: nowMinStr };
+      if (!Array.isArray(times) || times.length === 0) return { prev: null, next: null, now: null };
+      const now = new Date();
+      const nowSeconds = now.getHours()*3600 + now.getMinutes()*60 + now.getSeconds();
+      let prev = null, next = null;
+      for (let i=0;i<times.length;i++){
+        const tSec = timeToMinutes(times[i]) * 60;
+        if (tSec <= nowSeconds) prev = times[i];
+        if (tSec > nowSeconds) { next = times[i]; break; }
+      }
+      const nowMinStr = minutesToTime(Math.floor(nowSeconds/60));
+      return { prev, next, now: nowMinStr };
     }
 
-    // 显示时刻表
+    // 渲染时刻表（点击站点）
     function showTimetable(station){
-      const el = document.getElementById('timetable');
-      const key = station.pinyin; const lineName = '1号线';
+      const key = station.pinyin;
+      const lineName = '1号线';
       if (timetables[key]){
         const directions = Object.keys(timetables[key]);
-        if (directions.length === 1){ const dir = directions[0]; const times = timetables[key][dir]; el.innerHTML = `<strong>${station.name}</strong>（${lineName}） ${dir} 的今日时刻表：<br>` + renderTimeList(times); renderNowPanel(el, times);
+        if (directions.length === 1){
+          const dir = directions[0];
+          const times = timetables[key][dir];
+          timetableEl.innerHTML = `<strong>${station.name}</strong>（${lineName}） ${dir} 的今日时刻表：<div style="margin-top:8px">${renderTimeList(times)}</div>`;
+          renderNowPanel(timetableEl, times);
         } else {
           let html = `<strong>${station.name}</strong>（${lineName}） 的今日时刻表：<br>`;
-          for (const dir of directions){ html += `<div style="margin:8px 0"><button type="button" class="station" data-dir="${dir}">${dir}</button></div>`; }
+          for (const dir of directions){
+            html += `<div style="margin:8px 0"><button type="button" class="station" data-dir="${dir}">${dir}</button></div>`;
+          }
           html += '<div id="directionTimes" style="margin-top:8px;color:var(--muted)"></div>';
-          el.innerHTML = html;
-          el.querySelectorAll('button.station').forEach(b=>{ b.addEventListener('click', ()=>{ const dir = b.dataset.dir; const times = timetables[key][dir]; document.getElementById('directionTimes').innerHTML = renderTimeList(times) + renderNowPanelInline(times); }); });
+          timetableEl.innerHTML = html;
+          timetableEl.querySelectorAll('button.station').forEach(b=>{
+            b.addEventListener('click', ()=> {
+              const dir = b.dataset.dir;
+              const times = timetables[key][dir] || [];
+              document.getElementById('directionTimes').innerHTML = `${dir}：<div style="margin-top:8px">${renderTimeList(times)}</div>`;
+              renderNowPanel(document.getElementById('directionTimes'), times);
+            });
+          });
         }
       } else {
-        el.innerHTML = `<strong>${station.name}</strong>（${lineName}） 的今日时刻表（示例）：<br><ul>\n        <li>06:15 — 首班车</li>\n        <li>07:30 — 高峰班次</li>\n        <li>12:00 — 平峰班次</li>\n        <li>18:20 — 末班车</li>\n      </ul>`;
+        timetableEl.innerHTML = `<strong>${station.name}</strong>（${lineName}） 的今日时刻表（示例）：<br><ul>
+          <li>06:15 — 首班车</li>
+          <li>07:30 — 高峰班次</li>
+          <li>23:00 — 末班车（示例）</li>
+        </ul>`;
       }
     }
 
-    // renderNowPanel 与相关函数
+    // 渲染当前/上一班/下一班面板
     function renderNowPanel(containerEl, times){
-      const info = findPrevNext(times); const nowText = `当前时间：${info.now}`; const prevText = info.prev ? `上一班：${info.prev}` : '上一班：—（首班前）'; const nextText = info.next ? `下一班：${info.next}` : '下一班：—（末班已过）'; const countdownText = info.next ? computeCountdownText(times) : '—';
-      const panel = document.createElement('div'); panel.className='meta'; panel.innerHTML = `<div class="now-panel">\n        <div class="chip" id="nowChip">${nowText}</div>\n        <div class="chip" id="prevChip">${prevText}</div>\n        <div class="chip" id="nextChip">${nextText}</div>\n        <div class="chip" id="countdownChip">下一班倒计时：${countdownText}</div>\n        <button id="refreshTimes" type="button" class="station" style="margin-left:6px">刷新</button>\n      </div>`;
+      // 清理已有面板（避免重复）
+      const existing = containerEl.querySelector('.now-panel-container');
+      if (existing) existing.remove();
+
+      const info = findPrevNext(times);
+      const panel = document.createElement('div');
+      panel.className = 'meta now-panel-container';
+      const nowText = `当前时间：${info.now || '--:--'}`;
+      const prevText = info.prev ? `上一班：${info.prev}` : '上一班：—（首班前）';
+      const nextText = info.next ? `下一班：${info.next}` : '下一班：—（末班后或无）';
+      panel.innerHTML = `<div class="now-panel">
+        <div class="chip" id="nowChip">${nowText}</div>
+        <div class="chip" id="prevChip">${prevText}</div>
+        <div class="chip" id="nextChip">${nextText}</div>
+        <button id="refreshTimes" class="station" type="button" style="background:#fff;color:var(--primary);border:1px solid #e6eefb">刷新</button>
+      </div>`;
       containerEl.appendChild(panel);
-      const refreshBtn = panel.querySelector('#refreshTimes'); let intervalId = null;
-      function updatePanel(){ const now = new Date(); const nowSeconds = now.getHours()*3600 + now.getMinutes()*60 + now.getSeconds(); panel.querySelector('#nowChip').textContent = `当前时间：${minutesToTime(Math.floor(nowSeconds/60))}`; let prev=null,next=null; for (let i=0;i<times.length;i++){ const tSec = timeToMinutes(times[i]) * 60; if (tSec <= nowSeconds) prev = times[i]; if (tSec > nowSeconds) { next = times[i]; break; } } panel.querySelector('#prevChip').textContent = prev ? `上一班：${prev}` : '上一班：—（首班前）'; panel.querySelector('#nextChip').textContent = next ? `下一班：${next}` : '下一班：—（末班已过）'; if (next){ const tSec = timeToMinutes(next) * 60; let diff = tSec - nowSeconds; if (diff < 0) diff = 0; const mm = Math.floor(diff/60); const ss = diff % 60; panel.querySelector('#countdownChip').textContent = `下一班倒计时：${mm}分${String(ss).padStart(2,'0')}秒`; } else { panel.querySelector('#countdownChip').textContent = '下一班倒计时：—'; } if (!document.body.contains(panel) && intervalId) { clearInterval(intervalId); } }
-      updatePanel(); intervalId = setInterval(updatePanel, 1000);
-      refreshBtn.addEventListener('click', ()=>{ if (intervalId) clearInterval(intervalId); panel.remove(); renderNowPanel(document.getElementById('timetable'), times); });
+
+      // 实时更新当前时间显示（每秒）
+      let intervalId = null;
+      function updatePanel(){
+        const now = new Date();
+        const nowSeconds = now.getHours()*3600 + now.getMinutes()*60 + now.getSeconds();
+        const nowMinStr = minutesToTime(Math.floor(nowSeconds/60));
+        const info2 = findPrevNext(times);
+        panel.querySelector('#nowChip').textContent = `当前时间：${nowMinStr}`;
+        panel.querySelector('#prevChip').textContent = info2.prev ? `上一班：${info2.prev}` : '上一班：—（首班前）';
+        panel.querySelector('#nextChip').textContent = info2.next ? `下一班：${info2.next}` : '下一班：—（末班后或无）';
+      }
+      updatePanel();
+      intervalId = setInterval(updatePanel, 1000);
+
+      panel.querySelector('#refreshTimes').addEventListener('click', ()=>{
+        if (intervalId) clearInterval(intervalId);
+        panel.remove();
+        renderNowPanel(containerEl, times);
+      });
     }
 
-    function renderNowPanelInline(times){ const info = findPrevNext(times); const nowText = `当前时间：${info.now}`; const prevText = info.prev ? `上一班：${info.prev}` : '上一班：—（首班前）'; const nextText = info.next ? `下一班：${info.next}` : '下一班：—（末班已过）'; const countdownText = info.next ? computeCountdownText(times) : '—'; return `<div class="meta"><div class="now-panel"><div class="chip">${nowText}</div><div class="chip">${prevText}</div><div class="chip">${nextText}</div><div class="chip">下一班倒计时：${countdownText}</div></div></div>`; }
+    // 将时刻数组渲染为行/块
+    function renderTimeList(times){
+      if (!times || times.length === 0) return '<div>暂无时刻信息。</div>';
+      const perLine = 8;
+      let html = '<div style="text-align:left;display:inline-block;color:var(--muted)">';
+      for (let i=0;i<times.length;i++){
+        html += `<span style="display:inline-block;width:90px;padding:4px 6px">${times[i]}</span>`;
+        if ((i+1) % perLine === 0) html += '<br>';
+      }
+      html += '</div>';
+      return html;
+    }
 
-    function computeCountdownText(times){ const now = new Date(); const nowSeconds = now.getHours()*3600 + now.getMinutes()*60 + now.getSeconds(); for (let i=0;i<times.length;i++){ const tSec = timeToMinutes(times[i]) * 60; if (tSec > nowSeconds){ const diff = tSec - nowSeconds; const mm = Math.floor(diff/60); const ss = diff % 60; return `${mm}分${String(ss).padStart(2,'0')}秒`; } } return '—'; }
-
-    function renderTimeList(times){ if (!times || times.length === 0) return '<div>暂无时刻信息。</div>'; const perLine = 8; let html = '<div style="text-align:left;display:inline-block;color:var(--muted)">'; for (let i=0;i<times.length;i++){ if (i % perLine === 0) html += '<div style="margin:6px 0">'; html += `<span style="display:inline-block;width:72px">${times[i]}</span>`; if (i % perLine === perLine-1 || i === times.length-1) html += '</div>'; } html += '</div>'; return html; }
-
-    // 事件绑定
+    // 事件绑定与初始渲染
     searchInput.addEventListener('input', renderStations);
     clearSearchBtn.addEventListener('click', ()=>{ searchInput.value=''; renderStations(); searchInput.focus(); });
 
-    // 初次渲染
     renderStations();
   </script>
 </body>
