@@ -17,8 +17,12 @@
     /* per-line colors */
     a.btn.line1{background:var(--line1)}
     a.btn.planned{background:var(--planned)}
-    .line-desc{color:#0f172a;background:#f1f5f9;padding:12px;border-radius:8px;margin-top:8px;font-size:14px}
+    /* 3号线单独配色 */
+    a.btn.line3{background:#f2cf01;color:#0f172a}
+    /* 3号线状态颜色覆盖 */
     .status-planned{color:#818181;font-weight:700;margin-left:8px}
+    .status-line3{color:#f2cf01;font-weight:700;margin-left:8px}
+    .line-desc{color:#0f172a;background:#f1f5f9;padding:12px;border-radius:8px;margin-top:8px;font-size:14px}
     .status-running{color:#A62E37;font-weight:700;margin-left:8px}
     footer{margin-top:26px;color:var(--muted);font-size:13px}
     @media(min-width:520px){.actions{flex-direction:row;justify-content:center;flex-wrap:wrap}}
@@ -33,7 +37,7 @@
     <div class="actions" role="list">
       <a class="btn line1" role="listitem" href="line1.html" aria-label="查看1号线">1号线<span class="status-running">（运营中）</span></a>
       <a class="btn secondary planned" role="listitem" href="line2.html" aria-label="查看2号线">2号线<span class="status-planned">（规划中）</span></a>
-      <a class="btn planned" role="listitem" href="line3.html" aria-label="查看3号线">3号线<span class="status-planned">（建设中）</span></a>
+      <a class="btn planned line3" role="listitem" href="line3.html" aria-label="查看3号线">3号线<span class="status-line3">（建设中）</span></a>
       <a class="btn secondary planned" role="listitem" href="line4.html" aria-label="查看4号线">4号线<span class="status-planned">（规划中）</span></a>
       <a class="btn planned" role="listitem" href="line5.html" aria-label="查看5号线">5号线<span class="status-planned">（规划中）</span></a>
       <a class="btn secondary planned" role="listitem" href="line6.html" aria-label="查看6号线">6号线<span class="status-planned">（建设中）</span></a>
@@ -50,13 +54,13 @@
 
     <section aria-labelledby="overview" style="margin-top:20px;text-align:left">
       <h2 id="overview" style="font-size:16px;margin:0 0 8px">线路简介</h2>
-      <div class="line-desc"><strong>1号线</strong><span class="status-running">（运营中）</span> — 连接市中心与城市两边开发区边缘，尽可能多覆盖市中心。站距短，修建年代久远。
+      <div class="line-desc"><strong>1号线</strong><span class="status-running">（运营中）</span> — 连接市中心与城市两边开发区边缘，尽可能多覆盖市中心。站距短，�[...]</div>
       <div class="line-desc"><strong>2号线</strong><span class="status-planned">（规划中）</span></div>
-      <div class="line-desc"><strong>3号线</strong><span class="status-planned">（建设中）</span> — 纵贯南北的主干线，连接机场、长福北站、长福南站等多个交通枢纽及景区。
+      <div class="line-desc"><strong>3号线</strong><span class="status-line3">（建设中）</span> — 纵贯南北的主干线，连接机场、长福北站、长福南站等多个交通枢纽，计划贯通城市主要南北走向，促进城际换乘与机场联络。</div>
       <div class="line-desc"><strong>4号线</strong><span class="status-planned">（规划中）</span></div>
       <div class="line-desc"><strong>5号线</strong><span class="status-planned">（规划中）</span></div>
-      <div class="line-desc"><strong>6号线</strong><span class="status-planned">（建设中）</span></div> — 纵贯市区南北的一条快线，连接南站和火车站，方便这两个车站的乘客转乘。
-      <div class="line-desc"><strong>7号线</strong><span class="status-planned">（建设中）</span></div> — 作为大学城内部一条通勤线路，计划未来连接长福西站与长福火车站，方便大学生快速前往大学城。
+      <div class="line-desc"><strong>6号线</strong><span class="status-planned">（建设中）</span> — 纵贯市区南北的一条快线，连接南站和火车站，方便这两个车站之间的换乘与衔接。</div>
+      <div class="line-desc"><strong>7号线</strong><span class="status-planned">（建设中）</span> — 作为大学城内部一条通勤线路，计划未来连接长福西站与长福火车站周边。</div>
       <div class="line-desc"><strong>8号线</strong><span class="status-planned">（规划中）</span></div>
       <div class="line-desc"><strong>9号线</strong><span class="status-planned">（规划中）</span></div>
       <div class="line-desc"><strong>10号线</strong><span class="status-planned">（规划中）</span></div>
